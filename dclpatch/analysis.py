@@ -76,6 +76,10 @@ class BoxplotAnalysis:
         
 class BaseCDFAnalysis(ABC):
 
+    @property
+    def measurements(self):
+        return ['amplitude', 'inter_event_interval']
+
     def __init__(self, database: Database, df_to_use: DataFrame, recording_type: str, plot_title: Optional[str]=None) -> None:
         self.database = database
         self.df = df_to_use
@@ -153,6 +157,8 @@ class BaseCDFAnalysis(ABC):
 
 
 class CDFAnalysis(BaseCDFAnalysis):
+    
+    
 
 
     def run_analysis(self, group_column: str, group_id: str, show: bool, save: bool):
@@ -164,9 +170,28 @@ class CDFAnalysis(BaseCDFAnalysis):
             self.get_data_for_cumulative_distributions(filepath = recording_filepath)
         df_all_events = pd.DataFrame(data=self.events_all_stim_paradigms)
         self.plot_cdfs(data = df_all_events,
-                       columns_for_cdfs = ['amplitude', 'inter_event_interval'], 
+                       columns_for_cdfs = self.measurements, 
                        show = show,
                        save = save)
+
+
+    def get_data_for_export(self) -> Tuple[List[pd.DataFrame], List[str]]:
+        dfs, tab_names = [], []
+        df_all_events_of_all_stim_paradigms = pd.DataFrame(data=self.events_all_stim_paradigms)  
+        stim_paradigms = list(df_all_events_of_all_stim_paradigms['stimulation_string'].unique())
+        for stimulation_paradigm in stim_paradigms:
+            for analyzed_feature in self.measurements:
+                data = df_all_events_of_all_stim_paradigms.loc[df_all_events_of_all_stim_paradigms['stimulation_string'] == stimulation_paradigm, analyzed_feature].values
+                group_ids = [stimulation_paradigm]*data.shape[0]
+                cell_ids = df_all_events_of_all_stim_paradigms.loc[df_all_events_of_all_stim_paradigms['stimulation_string'] == stimulation_paradigm, 'global_cell_id'].values
+                stats_n_plots_io_scheme = {'data': data, 'group_id': group_ids, 'subject_id': cell_ids}
+                dfs.append(pd.DataFrame(data = stats_n_plots_io_scheme))
+                if analyzed_feature == 'inter_event_interval':
+                    feature_name_for_tab = 'IEI'
+                else:
+                    feature_name_for_tab = analyzed_feature
+                tab_names.append(f'{feature_name_for_tab}_for_{stimulation_paradigm}')        
+        return dfs, tab_names
 
 
     def plot_cdfs(self, data: pd.DataFrame, columns_for_cdfs: List, show: bool, save: bool):
@@ -231,10 +256,7 @@ class CDFAnalysis(BaseCDFAnalysis):
 
 
 class MeanComparisonOfCDFs(BaseCDFAnalysis):
-    
-    @property
-    def measurements(self):
-        return ['amplitude', 'inter_event_interval']
+
     
     def run_analysis(self, group_column: str, group_id: str, percentile: int, show: bool, save: bool):
         self.group_column = group_column

@@ -96,6 +96,9 @@ class PatchProject:
             elif analysis_type == 'CDF':
                 group_analysis = CDFAnalysis(database = self.database, df_to_use = df_to_use, recording_type = recording_type, plot_title = plot_title)
                 group_analysis.run_analysis(group_column = group_column, group_id = group_id, show = show, save = save)
+                if export:
+                    use_excel_writer = True
+                    dfs, tab_names = group_analysis.get_data_for_export()
         elif analysis_type == 'Boxplot':
             group_analysis = BoxplotAnalysis(database = self.database, df_to_use = df_to_use, recording_type = recording_type, plot_title = plot_title)
             group_analysis.run_analysis(group_column = group_column, group_id = group_id, show = show, save = save)
